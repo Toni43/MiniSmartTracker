@@ -7,8 +7,7 @@
   Edit by RA4NHY 03.2016
   1.Для работы с GPS использована библиотека TinyGPS++
   2.Для формирования строки APRS использован код из проекта SVTrackR
-  3.Добавлен алгоритм SmartBeacon на основе изменения скорости
-  4.Переработан основной алгоритм
+  3.Алгоритм взят так же из проекта SVTrackR
 */
 
 #include <TinyGPS++.h>
@@ -32,13 +31,27 @@ char from_addr[] = "RA4NHY";      // Позывной
 char dest_addr[] = "APZ058";     // Адрес
 char relays[] = "WIDE2 2";       // Путь
 const int analogInPin = A0;
-float lastTxLat;
-float lastTxLng;
 int ledPin = 13;
 const byte highSpeed = 60;       // High speed
 const byte lowSpeed = 20;        // Low speed
-unsigned long txInterval = 80000L;  // Initial 80 secs internal
 unsigned long previousMillis = 0;
+float latitude = 0.0;
+float longitude = 0.0;
+
+// Initial lat/lng pos, change to your base station coordnates
+float lastTxLat = 58.606806;
+float lastTxLng = 49.570434;
+float lastTxdistance;
+
+int previousHeading, currentHeading = 0;
+
+unsigned int mCounter = 0;
+unsigned int txCounter = 0;
+unsigned long txTimer = 0;
+unsigned long lastTx = 0;
+unsigned long lastRx = 0;
+unsigned long txInterval = 80000L;  // Initial 80 secs internal
+
 
 void setup()
 {
@@ -52,71 +65,109 @@ void setup()
 
 void loop()
 {
- do
-  {
-        do
-         {
-          while (Serial.available())
-            {
-            gps.encode(Serial.read());
-            }   
-          }
-          
-          while (!gps.location.isValid() and !gps.location.isUpdated() );
-     
-  }
-  while (SmartBeaconPause());
-  
-  if (gps.location.age() < 3000 )
+ int headingDelta = 0;
+ 
+     while (Serial.available())
       {
+        gps.encode(Serial.read());
+      } 
+ 
+ ///////////////// Triggered by location updates /////////////////////// 
+   if ( gps.location.isUpdated() ) { 
+          
+    lastTxdistance = TinyGPSPlus::distanceBetween(
+          gps.location.lat(),
+          gps.location.lng(),
+          lastTxLat,
+          lastTxLng);
+          
+     latitude = gps.location.lat();
+     longitude = gps.location.lng();   
+          
+      // Get headings and heading delta
+      currentHeading = (int) gps.course.deg();
+      if ( currentHeading >= 180 ) { 
+      currentHeading = currentHeading-180; 
+      }
+      headingDelta = (int) ( previousHeading - currentHeading ) % 360;   
+     
+    } // endof gps.location.isUpdated()
+  
+  ///////////////// Triggered by time updates /////////////////////// 
+// Update LCD every second
 
+   if ( gps.time.isUpdated() ) {   
+    
+// Change the Tx internal based on the current speed
+// This change will not affect the countdown timer
+// Based on HamHUB Smart Beaconing(tm) algorithm
+
+      if ( gps.speed.kmph() < 5 ) {
+            txInterval = 300000;         // Change Tx internal to 5 mins
+       } else if ( gps.speed.kmph() < lowSpeed ) {
+            txInterval = 60000;          // Change Tx interval to 60
+       } else if ( gps.speed.kmph() > highSpeed ) {
+            txInterval = 20000;          // Change Tx interval to 20 secs
+       } else {
+        // Interval inbetween low and high speed 
+            txInterval = (highSpeed / gps.speed.kmph()) * 20000;       
+       } // endif
+      
+   }  // endof gps.time.isUpdated()
+               
+ ////////////////////////////////////////////////////////////////////////////////////
+ // Check for when to Tx packet
+ ////////////////////////////////////////////////////////////////////////////////////
+ 
+  lastTx = millis() - txTimer;
+
+  // Only check the below if locked satellites < 3
+
+   if ( (gps.satellites.value() > 3) and (gps.location.age() < 3000) ) {
+    if ( lastTx > 5000 ) {
+        // Check for heading more than 25 degrees
+        if ( (headingDelta < -25 || headingDelta >  25) && lastTxdistance > 5 ) {
+            if (TxtoRadio()) {
+                lastTxdistance = 0;   // Ensure this value is zero before the next Tx
+                previousHeading = currentHeading;
+            }
+        } // endif headingDelta
+    } // endif lastTx > 5000
+    
+    if ( lastTx > 10000 ) {
+         // check of the last Tx distance is more than 600m
+         if ( lastTxdistance > 600 ) {  
+            if ( TxtoRadio() ) {
+                lastTxdistance = 0;   // Ensure this value is zero before the next Tx
+            }
+       } // endif lastTxdistance
+    } // endif lastTx > 10000
+    
+    if ( lastTx >= txInterval ) {
+        // Trigger Tx Tracker when Tx interval is reach 
+        // Will not Tx if stationary bcos speed < 5 and lastTxDistance < 20
+        if ( lastTxdistance > 20 ) {
+              TxtoRadio(); 
+        } // endif lastTxdistance > 20 
+        
+        //Debug info
         Serial.print("sentencesWithFix=");Serial.println(gps.sentencesWithFix());
         Serial.print("Sentences that failed checksum=");
         Serial.println(gps.failedChecksum());
-
-        TxtoRadio();
+        //end DEBUG info
         
-      }
-      
+    } // endif of check for lastTx > txInterval
+    
+   } // Endif check for satellites
+    
+
   }
 
 
 ///////////////////////////////////////////////////////////////////////////////////////
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
-   //Smart Beaconing
-   //возвращает 0 при необходимости отправки пакета, в остальных случаях возвращает 1
-   int SmartBeaconPause(void)
-         {
-         // Change the Tx internal based on the current speed
-         // This change will not affect the countdown timer
-         // Based on HamHUB Smart Beaconing(tm) algorithm
-
-         if ( gps.speed.kmph() < 5 ) {
-         txInterval = 300000 ;//         // Change Tx internal to 5 mins
-       } else if ( gps.speed.kmph() < lowSpeed ) {
-         txInterval = 600000;          // Change Tx interval to 60 secs
-       } else if ( gps.speed.kmph() > highSpeed ) {
-         txInterval = 20000;          // Change Tx interval to 20 secs
-       } else {
-         // Interval inbetween low and high speed
-         txInterval = (highSpeed / gps.speed.kmph() ) * 20000;
-       } // endif
-
-        
-        unsigned long currentMillis = millis();
-        
-        if (currentMillis - previousMillis >= txInterval)
-          {
-          previousMillis = currentMillis;
-          return 0;
-          }
-         else
-         {
-         return 1;
-          }
-       }
-///////////////////////////////////////////////////////////////////////////////////////////////////////
+  
 
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -128,7 +179,9 @@ boolean TxtoRadio(void) {
      String latOut, lngOut, cmtOut = "";
      unsigned int Mem = freeRam();
      float Volt = (float) readVcc();
-  
+     
+     digitalWrite(13, HIGH);
+     
      lastTxLat = gps.location.lat();
      lastTxLng = gps.location.lng();
      
@@ -218,7 +271,8 @@ boolean TxtoRadio(void) {
          packet_buffer = char_array;
          Serial.print("Send:    "),Serial.println(packet_buffer);
          QAPRS.send(from_addr, '9', dest_addr, '0', relays, packet_buffer);    // SSID-9
-
+         
+         digitalWrite(13, LOW);
         
 } // endof TxtoRadio()
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
