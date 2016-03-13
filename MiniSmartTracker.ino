@@ -43,6 +43,7 @@ void setup()
 {
   Serial.begin(9600);            
   Serial.println("WAIT!");
+  txTimer = millis();
   delay(100);
   pinMode(ledPin, OUTPUT);
   QAPRS.init(3, 2);
@@ -166,11 +167,12 @@ boolean TxtoRadio(void) {
      unsigned int Mem = freeRam();
      float Volt = (float) readVcc();
      
-     digitalWrite(ledPin, HIGH);
+     digitalWrite(13, HIGH);
      
      lastTxLat = gps.location.lat();
      lastTxLng = gps.location.lng();
-     
+
+     if ( lastTx > 6000 ) { // This prevent ANY condition to Tx below 6 secs
              
        latDegMin = convertDegMin(lastTxLat);
        lngDegMin = convertDegMin(lastTxLng);
@@ -256,9 +258,22 @@ boolean TxtoRadio(void) {
          // send via packet_buffer
          packet_buffer = char_array;
          Serial.print("Send:    "),Serial.println(packet_buffer);
-         QAPRS.send(MYCALL, CALL_SSID, DEST_ADDR, '0', RELAY, packet_buffer);
+         QAPRS.send(from_addr, '9', dest_addr, '0', relays, packet_buffer);    // SSID-9
+
+
+       // Reset all tx timer 
+       txInterval = 80000;    
+       txTimer = millis(); 
+       lastTx = 0;
+
+        digitalWrite(13, LOW);
+       
+       // Tx success, return TRUE
+         return 1;
+     } else {
+         return 0; 
+     }// endif lastTX > 6000
          
-         digitalWrite(ledPin, LOW);
         
 } // endof TxtoRadio()
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
