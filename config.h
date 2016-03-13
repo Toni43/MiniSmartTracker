@@ -3,6 +3,7 @@
 #define DEST_ADDR "APZ058"
 #define RELAY "WIDE2 2"
 #define CALL_SSID '9'
+
 // Refer to http://wa8lmf.net/aprs/APRS_symbols.htm
 #define SYMBOL_CHAR '('         // Blue Dot
 #define SYMBOL_TABLE 's'        // Primary Table (s) or Alternate Table (a)

@@ -16,6 +16,10 @@ OneWire  ds(6);
 char * packet_buffer  = "                                                                                    \n ";
 char gradbuf[4];
 
+char from_addr[] = MYCALL;      
+char dest_addr[] = DEST_ADDR;     
+char relays[] = RELAY;       
+
 const int analogInPin = A0;
 int ledPin = 13;
 const byte highSpeed = 60;       // High speed
@@ -258,7 +262,7 @@ boolean TxtoRadio(void) {
          // send via packet_buffer
          packet_buffer = char_array;
          Serial.print("Send:    "),Serial.println(packet_buffer);
-         QAPRS.send(from_addr, '9', dest_addr, '0', relays, packet_buffer);    // SSID-9
+         QAPRS.send(from_addr, CALL_SSID, dest_addr, '0', relays, packet_buffer);
 
 
        // Reset all tx timer 
