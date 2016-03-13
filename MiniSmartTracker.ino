@@ -1,14 +1,4 @@
-/*
-  Copyright (C) 2013 Lukasz Nidecki SQ5RWU
-  Edit by RA4FHE xDD 2015
-  1.Добавленно кол-принимаемых спутников
-  2.Вольтметр        (A0)
-  3.Термометр DS1820 (D6)
-  Edit by RA4NHY 03.2016
-  1.Для работы с GPS использована библиотека TinyGPS++
-  2.Для формирования строки APRS использован код из проекта SVTrackR
-  3.Алгоритм взят так же из проекта SVTrackR
-*/
+
 
 #include <TinyGPS++.h>
 #include <string.h>
@@ -17,9 +7,7 @@
 #include <SPI.h>
 #include <OneWire.h>
 
-
-#define COMMENT "QAPRS"
-//#define TEMP_TX
+#include "config.h"
 
 // The TinyGPS++ object
 TinyGPSPlus gps;
@@ -27,9 +15,7 @@ TinyGPSPlus gps;
 OneWire  ds(6);
 char * packet_buffer  = "                                                                                    \n ";
 char gradbuf[4];
-char from_addr[] = "RA4NHY";      // Позывной
-char dest_addr[] = "APZ058";     // Адрес
-char relays[] = "WIDE2 2";       // Путь
+
 const int analogInPin = A0;
 int ledPin = 13;
 const byte highSpeed = 60;       // High speed
@@ -39,8 +25,8 @@ float latitude = 0.0;
 float longitude = 0.0;
 
 // Initial lat/lng pos, change to your base station coordnates
-float lastTxLat = 58.606806;
-float lastTxLng = 49.570434;
+float lastTxLat = HOME_LAT;
+float lastTxLng = HOME_LON;
 float lastTxdistance;
 
 int previousHeading, currentHeading = 0;
@@ -180,7 +166,7 @@ boolean TxtoRadio(void) {
      unsigned int Mem = freeRam();
      float Volt = (float) readVcc();
      
-     digitalWrite(13, HIGH);
+     digitalWrite(ledPin, HIGH);
      
      lastTxLat = gps.location.lat();
      lastTxLng = gps.location.lng();
@@ -270,9 +256,9 @@ boolean TxtoRadio(void) {
          // send via packet_buffer
          packet_buffer = char_array;
          Serial.print("Send:    "),Serial.println(packet_buffer);
-         QAPRS.send(from_addr, '9', dest_addr, '0', relays, packet_buffer);    // SSID-9
+         QAPRS.send(MYCALL, CALL_SSID, DEST_ADDR, '0', RELAY, packet_buffer);
          
-         digitalWrite(13, LOW);
+         digitalWrite(ledPin, LOW);
         
 } // endof TxtoRadio()
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
