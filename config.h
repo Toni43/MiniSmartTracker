@@ -28,8 +28,8 @@ const float HOME_LON = 49.570434;
 /////////////////////////////////////////////////////////////
 
 /////////////////////////////////////////////////////////////
-#define SEC(X) X*1000
-
+#define SECONDS(X) X*1000
+#define MINUTES(X) X*60000
 
 //Heading delta threshold degrees
 #define NEG_HEAD_THR -20
