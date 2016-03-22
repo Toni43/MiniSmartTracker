@@ -28,6 +28,8 @@ const float HOME_LON = 49.570434;
 /////////////////////////////////////////////////////////////
 
 /////////////////////////////////////////////////////////////
+#define SEC(X) X*1000
+
 
 //Heading delta threshold degrees
 #define NEG_HEAD_THR -20
@@ -36,8 +38,8 @@ const float HOME_LON = 49.570434;
 //lastTxdistance threshold in meters
 #define LAST_TX_DIST_THR 600
 
-//gps.location.age threshold in milliseconds
-#define LOCATION_AGE_THR 3000
+//gps.location.age threshold in seconds
+#define LOCATION_AGE_THR SEC(3)
 
 
 //low and high speed threshold for smart beacon code km/h
