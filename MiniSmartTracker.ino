@@ -16,9 +16,9 @@ OneWire  ds(6);
 char * packet_buffer  = "                                                                                    \n ";
 char gradbuf[4];
 
-char from_addr[] = MYCALL;      
-char dest_addr[] = DEST_ADDR;     
-char relays[] = RELAY;       
+const char from_addr[] = MYCALL;      
+const char dest_addr[] = DEST_ADDR;     
+const char relays[] = RELAY;       
 
 const int analogInPin = A0;
 int ledPin = 13;
