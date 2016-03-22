@@ -22,8 +22,8 @@ const char relays[] = RELAY;
 
 const int analogInPin = A0;
 int ledPin = 13;
-const byte highSpeed = 60;       // High speed
-const byte lowSpeed = 20;        // Low speed
+const byte highSpeed = HIGH_SPEED_THR;       // High speed
+const byte lowSpeed = LOW_SPEED_THR;        // Low speed
 unsigned long previousMillis = 0;
 float latitude = 0.0;
 float longitude = 0.0;
@@ -114,10 +114,10 @@ void loop()
 
   // Only check the below if locked satellites < 3
 
-   if ( (gps.satellites.value() > 3) and (gps.location.age() < 3000) ) {
+   if ( (gps.satellites.value() > 3) and (gps.location.age() < LOCATION_AGE_THR) ) {
     if ( lastTx > 5000 ) {
         // Check for heading more than 25 degrees
-        if ( (headingDelta < -25 || headingDelta >  25) && lastTxdistance > 5 ) {
+        if ( (headingDelta < NEG_HEAD_THR || headingDelta >  POS_HEAD_THR) && lastTxdistance > 5 ) {
             if (TxtoRadio()) {
                 lastTxdistance = 0;   // Ensure this value is zero before the next Tx
                 previousHeading = currentHeading;
@@ -126,8 +126,8 @@ void loop()
     } // endif lastTx > 5000
     
     if ( lastTx > 10000 ) {
-         // check of the last Tx distance is more than 600m
-         if ( lastTxdistance > 600 ) {  
+         // check of the last Tx distance is more than LAST_TX_DIST_THR
+         if ( lastTxdistance > LAST_TX_DIST_THR ) {  
             if ( TxtoRadio() ) {
                 lastTxdistance = 0;   // Ensure this value is zero before the next Tx
             }
@@ -140,12 +140,14 @@ void loop()
         if ( lastTxdistance > 20 ) {
               TxtoRadio(); 
         } // endif lastTxdistance > 20 
-        
+
+        #ifdef DEBUG_INFO
         //Debug info
         Serial.print("sentencesWithFix=");Serial.println(gps.sentencesWithFix());
         Serial.print("Sentences that failed checksum=");
         Serial.println(gps.failedChecksum());
         //end DEBUG info
+        #endif
         
     } // endif of check for lastTx > txInterval
     
@@ -238,13 +240,19 @@ boolean TxtoRadio(void) {
        cmtOut.concat("/A=");
        cmtOut.concat(padding((int)gps.altitude.feet(),6));
        cmtOut.concat(" ");
+
+    //On/Off transmit of voltage
+    #ifdef VOLT_TX   
        cmtOut.concat("V=");
        cmtOut.concat(Volt);
        cmtOut.concat(" ");
+    #endif
+       
        cmtOut.concat("Sat=");
        cmtOut.concat(gps.satellites.value());
        cmtOut.concat(" ");
 
+    //On/Off transmit of temperature 
     #ifdef TEMP_TX
       cmtOut.concat("T=");
       cmtOut.concat(getTemp());
