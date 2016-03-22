@@ -40,7 +40,7 @@ unsigned int txCounter = 0;
 unsigned long txTimer = 0;
 unsigned long lastTx = 0;
 unsigned long lastRx = 0;
-unsigned long txInterval = 80000L;  // Initial 80 secs internal
+unsigned long txInterval = SECONDS(80);  // Initial 80 secs internal
 
 
 void setup()
@@ -94,14 +94,14 @@ void loop()
 // Based on HamHUB Smart Beaconing(tm) algorithm
 
       if ( gps.speed.kmph() < 5 ) {
-            txInterval = 300000;         // Change Tx internal to 5 mins
+            txInterval = MINUTES(5);         // Change Tx internal to 5 mins
        } else if ( gps.speed.kmph() < lowSpeed ) {
-            txInterval = 60000;          // Change Tx interval to 60
+            txInterval = MINUTES(1);          // Change Tx interval to 1 mins
        } else if ( gps.speed.kmph() > highSpeed ) {
-            txInterval = 20000;          // Change Tx interval to 20 secs
+            txInterval = SECONDS(20);          // Change Tx interval to 20 secs
        } else {
         // Interval inbetween low and high speed 
-            txInterval = (highSpeed / gps.speed.kmph()) * 20000;       
+            txInterval = (highSpeed / gps.speed.kmph()) * SECONDS(20); 
        } // endif
       
    }  // endof gps.time.isUpdated()
@@ -115,7 +115,7 @@ void loop()
   // Only check the below if locked satellites < 3
 
    if ( (gps.satellites.value() > 3) and (gps.location.age() < LOCATION_AGE_THR) ) {
-    if ( lastTx > 5000 ) {
+    if ( lastTx > SECONDS(5) ) {
         // Check for heading more than 25 degrees
         if ( (headingDelta < NEG_HEAD_THR || headingDelta >  POS_HEAD_THR) && lastTxdistance > 5 ) {
             if (TxtoRadio()) {
@@ -125,7 +125,7 @@ void loop()
         } // endif headingDelta
     } // endif lastTx > 5000
     
-    if ( lastTx > 10000 ) {
+    if ( lastTx > SECONDS(10) ) {
          // check of the last Tx distance is more than LAST_TX_DIST_THR
          if ( lastTxdistance > LAST_TX_DIST_THR ) {  
             if ( TxtoRadio() ) {
@@ -178,7 +178,7 @@ boolean TxtoRadio(void) {
      lastTxLat = gps.location.lat();
      lastTxLng = gps.location.lng();
 
-     if ( lastTx > 6000 ) { // This prevent ANY condition to Tx below 6 secs
+     if ( lastTx > SECONDS(6) ) { // This prevent ANY condition to Tx below 6 secs
              
        latDegMin = convertDegMin(lastTxLat);
        lngDegMin = convertDegMin(lastTxLng);
@@ -274,7 +274,7 @@ boolean TxtoRadio(void) {
 
 
        // Reset all tx timer 
-       txInterval = 80000;    
+       txInterval = SECONDS(80);    
        txTimer = millis(); 
        lastTx = 0;
 
