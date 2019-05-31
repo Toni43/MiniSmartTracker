@@ -214,7 +214,7 @@ boolean TxtoRadio(void) {
 
        // Append 0 if Lng less than 10
        if ( fabs(lastTxLng) < 10 ) {
-       latOut.concat("0");      // Append 0 if Lng less than 10         
+       lngOut.concat("0");      // Append 0 if Lng less than 10         
        }  
 
        lngOut.concat(tmp);      // Actual Lng in DDDMM.MM
